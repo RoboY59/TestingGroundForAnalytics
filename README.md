@@ -31,4 +31,8 @@ This project provides an Express.js server that queries the Clash of Clans API a
 - `__tests__/` – Jest tests.
 - `.env.example` – template for environment variables.
 
+## Continuous Integration
+
+The test suite is automatically executed in GitHub Actions on each push and pull request.
+
 
