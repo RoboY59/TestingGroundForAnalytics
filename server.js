@@ -83,11 +83,20 @@ app.get("/api/cwl/group", async (req, res) => {
 });
 
 app.get("/api/cwl/war/:index", async (req, res) => {
+  const index = parseInt(req.params.index, 10);
+  if (!Number.isInteger(index) || index < 1) {
+    return res.status(400).json({ error: "Ungültiger Index" });
+  }
   try {
-    const index = parseInt(req.params.index);
     const clanTag = encodeURIComponent("#" + CLAN_TAG);
     const group = await api.get(`/clans/${clanTag}/currentwar/leaguegroup`);
-    const round = group.data.rounds[index - 1];
+    const rounds = Array.isArray(group.data.rounds) ? group.data.rounds : [];
+    if (index > rounds.length) {
+      return res
+        .status(404)
+        .json({ error: "Kriegstag nicht gefunden oder Clan-Tag falsch." });
+    }
+    const round = rounds[index - 1];
     const war = await api.get(
       `/clanwarleagues/wars/${encodeURIComponent(round.warTag)}`
     );
