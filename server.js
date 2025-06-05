@@ -7,6 +7,15 @@ const NodeCache = require("node-cache");
 const apiCache = new NodeCache({ stdTTL: 3600 }); // 1 Stunde
 
 dotenv.config();
+const missing = [];
+if (!process.env.COC_API_KEY) missing.push("COC_API_KEY");
+if (!process.env.CLAN_TAG) missing.push("CLAN_TAG");
+if (missing.length) {
+  console.error(
+    `Missing environment variables: ${missing.join(", ")}. Please define them in your environment or .env file.`
+  );
+  process.exit(1);
+}
 const app = express();
 const PORT = 3000;
 const COC_API_KEY = process.env.COC_API_KEY;
