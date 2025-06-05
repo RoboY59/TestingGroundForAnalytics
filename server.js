@@ -7,6 +7,15 @@ const NodeCache = require("node-cache");
 const apiCache = new NodeCache({ stdTTL: 3600 }); // 1 Stunde
 
 dotenv.config();
+const missing = [];
+if (!process.env.COC_API_KEY) missing.push("COC_API_KEY");
+if (!process.env.CLAN_TAG) missing.push("CLAN_TAG");
+if (missing.length) {
+  console.error(
+    `Missing environment variables: ${missing.join(", ")}. Please define them in your environment or .env file.`
+  );
+  process.exit(1);
+}
 const app = express();
 const PORT = process.env.PORT || 3000;
 const COC_API_KEY = process.env.COC_API_KEY;
@@ -74,11 +83,20 @@ app.get("/api/cwl/group", async (req, res) => {
 });
 
 app.get("/api/cwl/war/:index", async (req, res) => {
+  const index = parseInt(req.params.index, 10);
+  if (!Number.isInteger(index) || index < 1) {
+    return res.status(400).json({ error: "Ungültiger Index" });
+  }
   try {
-    const index = parseInt(req.params.index);
     const clanTag = encodeURIComponent("#" + CLAN_TAG);
     const group = await api.get(`/clans/${clanTag}/currentwar/leaguegroup`);
-    const round = group.data.rounds[index - 1];
+    const rounds = Array.isArray(group.data.rounds) ? group.data.rounds : [];
+    if (index > rounds.length) {
+      return res
+        .status(404)
+        .json({ error: "Kriegstag nicht gefunden oder Clan-Tag falsch." });
+    }
+    const round = rounds[index - 1];
     const war = await api.get(
       `/clanwarleagues/wars/${encodeURIComponent(round.warTag)}`
     );
@@ -132,16 +150,26 @@ app.get("/api/cwl/missing", async (req, res) => {
     );
     // Alle Clans der Liga-Gruppe durchgehen
     let missing = [];
-    for (const cwlClan of leagueGroup.data.clans) {
-      const members = Array.isArray(cwlClan.members) ? cwlClan.members : [];
-      // 2. Aktuelle Clanliste holen
-      const clanData = await api.get(
-        `/clans/${encodeURIComponent(cwlClan.tag)}`
-      );
+
+    // Daten aller Clans gleichzeitig abrufen
+    const clansWithMembers = leagueGroup.data.clans.map((cwlClan) => ({
+      cwlClan,
+      members: Array.isArray(cwlClan.members) ? cwlClan.members : [],
+    }));
+
+    const clanResponses = await Promise.all(
+      clansWithMembers.map(({ cwlClan }) =>
+        api.get(`/clans/${encodeURIComponent(cwlClan.tag)}`)
+      )
+    );
+
+    clanResponses.forEach((clanData, idx) => {
+      const { cwlClan, members } = clansWithMembers[idx];
       const currentMembers = Array.isArray(clanData.data.memberList)
         ? clanData.data.memberList.map((m) => m.tag)
         : [];
-      // 3. Vergleichen
+
+      // Vergleichen
       members.forEach((m) => {
         if (!currentMembers.includes(m.tag)) {
           missing.push({
@@ -152,7 +180,7 @@ app.get("/api/cwl/missing", async (req, res) => {
           });
         }
       });
-    }
+    });
     res.json({ missing });
   } catch (err) {
     res
@@ -161,6 +189,10 @@ app.get("/api/cwl/missing", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server läuft unter http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server läuft unter http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
