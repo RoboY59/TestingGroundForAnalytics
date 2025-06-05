@@ -119,4 +119,35 @@ describe('API endpoints', () => {
       ]
     });
   });
+
+  test('GET /api/cwl/war/:index returns 400 for invalid index', async () => {
+    const res = await request(app).get('/api/cwl/war/0');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Ungültiger Index' });
+  });
+
+  test('GET /api/cwl/war/:index returns 404 when index is too high', async () => {
+    const group = { rounds: [{ warTag: '#AAA' }] };
+    nock(base)
+      .get(`/v1/clans/${getClanTag()}/currentwar/leaguegroup`)
+      .reply(200, group);
+
+    const res = await request(app).get('/api/cwl/war/2');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Kriegstag nicht gefunden oder Clan-Tag falsch.' });
+  });
+
+  test('GET /api/cwl/war/:index returns 404 when war not found', async () => {
+    const group = { rounds: [{ warTag: '#AAA' }] };
+    nock(base)
+      .get(`/v1/clans/${getClanTag()}/currentwar/leaguegroup`)
+      .reply(200, group);
+    nock(base)
+      .get('/v1/clanwarleagues/wars/%23AAA')
+      .reply(404);
+
+    const res = await request(app).get('/api/cwl/war/1');
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Kriegstag nicht gefunden oder Clan-Tag falsch.' });
+  });
 });
