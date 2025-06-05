@@ -119,4 +119,9 @@ describe('API endpoints', () => {
       ]
     });
   });
+
+  test('unknown route returns 404', async () => {
+    const res = await request(app).get('/unknown');
+    expect(res.status).toBe(404);
+  });
 });

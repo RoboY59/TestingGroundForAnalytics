@@ -189,6 +189,11 @@ app.get("/api/cwl/missing", async (req, res) => {
   }
 });
 
+// Handle unknown routes with 404
+app.use((req, res) => {
+  res.status(404).json({ error: "Not Found" });
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`🚀 Server läuft unter http://localhost:${PORT}`);
