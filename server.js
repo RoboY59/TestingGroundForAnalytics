@@ -180,6 +180,10 @@ app.get("/api/cwl/missing", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server läuft unter http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server läuft unter http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
